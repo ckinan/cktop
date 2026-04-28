@@ -40,7 +40,7 @@ func readProcess(pid int) (Process, error) {
 			}
 		} else if strings.HasPrefix(line, "Name:") {
 			process.Name, fieldErr = extractFieldFromLine(line)
-		} else if strings.HasSuffix(line, "State:") {
+		} else if strings.HasPrefix(line, "State:") {
 			process.State, fieldErr = extractFieldFromLine(line)
 		} else if strings.HasPrefix(line, "Threads:") {
 			var s string
