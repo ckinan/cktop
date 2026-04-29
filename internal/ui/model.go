@@ -11,6 +11,7 @@ const (
 	colPIDWidth     = 8
 	colPPIDWidth    = 8
 	colUserWidth    = 10
+	colCPUWidth     = 8
 	colRSSWidth     = 10
 	colCommandWidth = 40
 )
@@ -33,6 +34,7 @@ func New(ch <-chan collector.Snapshot) Model {
 		{Title: "PID", Width: colPIDWidth},
 		{Title: "PPID", Width: colPPIDWidth},
 		{Title: "User", Width: colUserWidth},
+		{Title: "CPU%", Width: colCPUWidth},
 		{Title: "RSS", Width: colRSSWidth},
 		{Title: "Command", Width: colCommandWidth},
 	}

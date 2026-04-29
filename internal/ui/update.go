@@ -45,6 +45,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				fmt.Sprintf("%d", p.Pid),
 				fmt.Sprintf("%d", p.Ppid),
 				p.Username,
+				fmt.Sprintf("%.2f%%", p.CPU),
 				internal.HumanBytes(p.Rss),
 				p.Cmdline,
 			}
@@ -60,16 +61,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		// Reserve lines for RAM header (1) + blank (1) + [table content] + blank (1) + footer (1) = 4
+		// Reserve lines for CPU header (1) + RAM header (1) + blank (1) + [table content] + blank (1) + footer (1) = 5
 		// bubbles/table renders its own column header row internally
-		m.table.SetHeight(m.height - 4)
-		cmdW := m.width - colPIDWidth - colPPIDWidth - colUserWidth - colRSSWidth
+		m.table.SetHeight(m.height - 5)
+		cmdW := m.width - colPIDWidth - colPPIDWidth - colUserWidth - colCPUWidth - colRSSWidth
 		cmdW = max(20, cmdW)
 
 		m.table.SetColumns([]table.Column{
 			{Title: "PID", Width: colPIDWidth},
 			{Title: "PPID", Width: colPPIDWidth},
 			{Title: "User", Width: colUserWidth},
+			{Title: "CPU%", Width: colCPUWidth},
 			{Title: "RSS", Width: colRSSWidth},
 			{Title: "Command", Width: cmdW},
 		})

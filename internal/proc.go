@@ -1,10 +1,8 @@
 package internal
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/shirou/gopsutil/v4/process"
 )
@@ -13,11 +11,12 @@ type Process struct {
 	Pid      int // process id
 	Ppid     int // parent process id
 	Rss      int // bytes
+	CPU      float64
 	Cmdline  string
 	Username string
 }
 
-func readProcess(p *process.Process) (Process, error) {
+func ReadProcess(p *process.Process) (Process, error) {
 	ppid, err := p.Ppid()
 	if err != nil {
 		return Process{}, err
@@ -39,42 +38,16 @@ func readProcess(p *process.Process) (Process, error) {
 	if err != nil {
 		return Process{}, err
 	}
+	cpu, err := p.Percent(0)
+	if err != nil {
+		cpu = 0 // not fatal
+	}
 	return Process{
 		Pid:      int(p.Pid),
 		Ppid:     int(ppid),
 		Rss:      int(mem.RSS),
+		CPU:      cpu,
 		Cmdline:  cmdline,
 		Username: username,
 	}, nil
-}
-
-func ListProcess() ([]Process, error) {
-	procs, err := process.Processes()
-	if err != nil {
-		return nil, fmt.Errorf("listing /proc: %w", err)
-	}
-
-	results := make(chan Process, len(procs))
-	var wg sync.WaitGroup
-
-	for _, p := range procs {
-		wg.Add(1)
-		go func(p *process.Process) {
-			defer wg.Done()
-			if proc, err := readProcess(p); err == nil {
-				results <- proc
-			}
-		}(p)
-
-	}
-
-	// wait for all goroutines to finish, then close so range belo terminates
-	wg.Wait()
-	close(results)
-
-	var processes []Process
-	for p := range results {
-		processes = append(processes, p)
-	}
-	return processes, nil
 }
