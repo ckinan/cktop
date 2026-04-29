@@ -2,6 +2,8 @@ package internal
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/shirou/gopsutil/v4/process"
@@ -10,17 +12,12 @@ import (
 type Process struct {
 	Pid      int // process id
 	Ppid     int // parent process id
-	Name     string
 	Rss      int // bytes
 	Cmdline  string
 	Username string
 }
 
 func readProcess(p *process.Process) (Process, error) {
-	name, err := p.Name()
-	if err != nil {
-		return Process{}, err
-	}
 	ppid, err := p.Ppid()
 	if err != nil {
 		return Process{}, err
@@ -32,6 +29,12 @@ func readProcess(p *process.Process) (Process, error) {
 	// cmdline will error on kernel threads (they do not have cmdline)
 	// so let's not evaluate the errors for them
 	cmdline, _ := p.Cmdline()
+	// do not show the full path, only the executable and the args
+	if cmdline != "" {
+		parts := strings.SplitN(cmdline, " ", 2)
+		parts[0] = filepath.Base(parts[0])
+		cmdline = strings.Join(parts, " ")
+	}
 	username, err := p.Username()
 	if err != nil {
 		return Process{}, err
@@ -39,7 +42,6 @@ func readProcess(p *process.Process) (Process, error) {
 	return Process{
 		Pid:      int(p.Pid),
 		Ppid:     int(ppid),
-		Name:     name,
 		Rss:      int(mem.RSS),
 		Cmdline:  cmdline,
 		Username: username,

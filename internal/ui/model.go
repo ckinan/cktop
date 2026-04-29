@@ -11,7 +11,6 @@ const (
 	colPIDWidth     = 8
 	colPPIDWidth    = 8
 	colUserWidth    = 10
-	colNameWidth    = 15
 	colRSSWidth     = 10
 	colCommandWidth = 40
 )
@@ -32,9 +31,8 @@ func New(ch <-chan collector.Snapshot) Model {
 	// frame is painted right after startup, so this default is almost never actually visible
 	cols := []table.Column{
 		{Title: "PID", Width: colPIDWidth},
-		{Title: "PPID", Width: colNameWidth},
+		{Title: "PPID", Width: colPPIDWidth},
 		{Title: "User", Width: colUserWidth},
-		{Title: "Name", Width: colNameWidth},
 		{Title: "RSS", Width: colRSSWidth},
 		{Title: "Command", Width: colCommandWidth},
 	}

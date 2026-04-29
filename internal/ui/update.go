@@ -45,7 +45,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				fmt.Sprintf("%d", p.Pid),
 				fmt.Sprintf("%d", p.Ppid),
 				p.Username,
-				p.Name,
 				internal.HumanBytes(p.Rss),
 				p.Cmdline,
 			}
@@ -64,17 +63,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Reserve lines for RAM header (1) + blank (1) + [table content] + blank (1) + footer (1) = 4
 		// bubbles/table renders its own column header row internally
 		m.table.SetHeight(m.height - 4)
-		cmdW := m.width - colPIDWidth - colPPIDWidth - colUserWidth - colNameWidth - colRSSWidth
-
-		if cmdW < 20 {
-			cmdW = 20
-		}
+		cmdW := m.width - colPIDWidth - colPPIDWidth - colUserWidth - colRSSWidth
+		cmdW = max(20, cmdW)
 
 		m.table.SetColumns([]table.Column{
 			{Title: "PID", Width: colPIDWidth},
 			{Title: "PPID", Width: colPPIDWidth},
 			{Title: "User", Width: colUserWidth},
-			{Title: "Name", Width: colNameWidth},
 			{Title: "RSS", Width: colRSSWidth},
 			{Title: "Command", Width: cmdW},
 		})
