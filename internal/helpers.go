@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
-	"strings"
 )
 
 func HumanBytes(b int) string {
@@ -16,15 +15,6 @@ func HumanBytes(b int) string {
 	default:
 		return fmt.Sprintf("%d B", b)
 	}
-}
-
-// TODO remove this unused function
-func extractFieldFromLine(line string) (string, error) {
-	fields := strings.Fields(line)
-	if len(fields) < 2 {
-		return "", fmt.Errorf("invalid line, expected at least 2 fields, got %v, line: %s", len(fields), line)
-	}
-	return fields[1], nil
 }
 
 func SortBy[T any, K cmp.Ordered](items []T, key func(T) K, desc bool) []T {
