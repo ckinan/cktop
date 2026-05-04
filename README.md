@@ -2,6 +2,8 @@
 
 System Monitor written in Go.
 
+![cktop demo](demo.gif)
+
 This CLI tool is supposed to work on any OS supported by `gopsutil` e.g. Linux, MacOS, Windows. For supported platforms, read: https://github.com/shirou/gopsutil#current-status
 
 ## ROADMAP
