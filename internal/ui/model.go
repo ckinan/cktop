@@ -58,8 +58,9 @@ type Model struct {
 	tableDetail table.Model
 	treeRowPIDs []int // maps tableDetail row index → PID
 	// filter state (shared between both views)
-	filter       textinput.Model
-	filterActive bool
+	filter        textinput.Model
+	filterActive  bool
+	showKThreads  bool
 	// kill state
 	killPending bool
 	killPID     int

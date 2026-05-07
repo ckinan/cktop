@@ -65,6 +65,15 @@ func (m *Model) applySort() {
 
 	var sorted []domain.Process
 	procs := filterProcs(m.procs, m.filter.Value())
+	if !m.showKThreads {
+		filtered := procs[:0]
+		for _, p := range procs {
+			if !p.IsKthread {
+				filtered = append(filtered, p)
+			}
+		}
+		procs = filtered
+	}
 	switch m.sortBy {
 	case SortByRSS:
 		sorted = util.SortBy(procs, func(p domain.Process) int { return p.Rss }, m.sortDesc)
@@ -249,6 +258,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.killPending = true
 				}
 				return m, nil
+			case "H":
+				m.showKThreads = !m.showKThreads
+				return m, nil
 			case "q":
 				m.showDetail = false
 				m.filter.SetValue("")
@@ -290,6 +302,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.killPID = pid
 				m.killPending = true
 			}
+			return m, nil
+		case "H":
+			m.showKThreads = !m.showKThreads
+			m.applySort()
 			return m, nil
 		}
 		prev := m.sortBy

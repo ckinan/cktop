@@ -17,7 +17,7 @@ func (m Model) View() string {
 			util.HumanBytes(int64(m.frozenProc.Rss)),
 			m.frozenProc.Cmdline,
 		)
-		footer := m.footerView("[enter]details [/]search [F9]kill [q]back")
+		footer := m.footerView("[enter]details [/]search [H]kthreads [F9]kill [q]back")
 		return header + "\n" + m.tableDetail.View() + "\n\n" + footer
 	}
 	memPct := 0.0
@@ -31,7 +31,7 @@ func (m Model) View() string {
 		util.HumanBytes(m.memory.Total),
 		memPct,
 	)
-	footer := m.footerView("sort: [C]cpu [M]rss [P]pid [L]cmdline | [enter]details [/]search [F9]kill [q]quit")
+	footer := m.footerView("sort: [C]cpu [M]rss [P]pid [L]cmdline | [enter]details [/]search [H]kthreads [F9]kill [q]quit")
 	return header + "\n" + m.table.View() + "\n\n" + footer
 }
 

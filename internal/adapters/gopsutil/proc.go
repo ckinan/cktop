@@ -60,11 +60,16 @@ func readOne(p *process.Process) (domain.Process, error) {
 	if err != nil {
 		return domain.Process{}, err
 	}
-	// cmdline will error on kernel threads (they do not have cmdline)
-	// so let's not evaluate the errors for them
 	cmdline, _ := p.Cmdline()
+	isKthread := false
+	if cmdline == "" {
+		isKthread = true
+		if name, err := p.Name(); err == nil {
+			cmdline = "[" + name + "]"
+		}
+	}
 	// do not show the full path, only the executable and the args
-	if cmdline != "" {
+	if !isKthread && cmdline != "" {
 		parts := strings.SplitN(cmdline, " ", 2)
 		parts[0] = filepath.Base(parts[0])
 		cmdline = strings.Join(parts, " ")
@@ -86,11 +91,12 @@ func readOne(p *process.Process) (domain.Process, error) {
 		cpu = 0 // not fatal
 	}
 	return domain.Process{
-		Pid:      int(p.Pid),
-		Ppid:     int(ppid),
-		Rss:      int(mem.RSS),
-		CPU:      cpu,
-		Cmdline:  cmdline,
-		Username: username,
+		Pid:       int(p.Pid),
+		Ppid:      int(ppid),
+		Rss:       int(mem.RSS),
+		CPU:       cpu,
+		Cmdline:   cmdline,
+		Username:  username,
+		IsKthread: isKthread,
 	}, nil
 }

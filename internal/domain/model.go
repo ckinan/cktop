@@ -7,12 +7,13 @@ type Memory struct {
 }
 
 type Process struct {
-	Pid      int
-	Ppid     int
-	Rss      int
-	CPU      float64
-	Cmdline  string
-	Username string
+	Pid       int
+	Ppid      int
+	Rss       int
+	CPU       float64
+	Cmdline   string
+	Username  string
+	IsKthread bool
 }
 
 type Snapshot struct {
