@@ -1,0 +1,38 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Compile the binary
+    cmds:
+      - go build ./...
+
+  vet:
+    desc: Run go vet (catches bugs the compiler misses)
+    cmds:
+      - go vet ./...
+
+  test:unit:
+    desc: Run unit tests
+    cmds:
+      - go test -v ./...
+
+  test:integration:
+    desc: Run integration tests against the real system
+    cmds:
+      - go test -v -tags integration ./...
+
+  test:
+    desc: Run all tests (unit + integration)
+    cmds:
+      - task: test:unit
+      - task: test:integration
+
+  run:
+    desc: Run cktop
+    cmds:
+      - go run .
+
+  clean:
+    desc: Remove compiled binaries
+    cmds:
+      - rm -f cktop
