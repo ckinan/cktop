@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -135,8 +136,11 @@ func buildChildren(procs []domain.Process) map[int][]int {
 
 // appendTreeRows recursively builds table rows for the descendants of pid.
 // prefix carries the vertical-bar context from parent levels so connectors line up correctly.
+// Children are sorted by PID for a stable layout across live refreshes.
 func appendTreeRows(pid int, pByPid map[int]domain.Process, childrenByPid map[int][]int, prefix string, rows []table.Row, pids []int) ([]table.Row, []int) {
-	children := childrenByPid[pid]
+	children := make([]int, len(childrenByPid[pid]))
+	copy(children, childrenByPid[pid])
+	sort.Ints(children)
 	for i, childPid := range children {
 		isLast := i == len(children)-1
 		connector, nextPrefix := "├─ ", prefix+"│  "
@@ -201,6 +205,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applySort()
 		if wasEmpty {
 			m.table.GotoTop()
+		}
+		if m.showDetail {
+			found := false
+			for _, p := range m.procs {
+				if p.Pid == m.detailProc.Pid {
+					m.detailProc = p
+					found = true
+					break
+				}
+			}
+			if found {
+				m.detailProcDead = false
+				m.openDetailView()
+			} else {
+				m.detailProcDead = true
+			}
 		}
 		return m, waitForSnapshot(m.snapCh)
 	case tea.KeyMsg:
@@ -288,12 +308,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cursor := m.tableDetail.Cursor()
 				if cursor >= 0 && cursor < len(m.treeRowPIDs) {
 					pid := m.treeRowPIDs[cursor]
-					for _, p := range m.frozenProcs {
+					for _, p := range m.procs {
 						if p.Pid == pid {
-							m.frozenProc = p
+							m.detailProc = p
 							break
 						}
 					}
+					m.detailProcDead = false
 					m.filter.SetValue("")
 					m.openDetailView()
 				}
@@ -332,18 +353,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "enter":
 			isSortKey = false
-			frozenProcs := make([]domain.Process, len(m.procs))
-			copy(frozenProcs, m.procs)
-			m.frozenProcs = frozenProcs
 
 			selectedPID := m.table.SelectedRow()[0]
 			selectedPIDint, _ := strconv.Atoi(selectedPID)
-			for _, p := range m.frozenProcs {
+			for _, p := range m.procs {
 				if p.Pid == selectedPIDint {
-					m.frozenProc = p
+					m.detailProc = p
 					break
 				}
 			}
+			m.detailProcDead = false
 			m.filter.SetValue("")
 			m.openDetailView()
 			m.showDetail = true
@@ -374,8 +393,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		m.table.SetHeight(m.height - 5)
-		m.tableDetail.SetHeight(m.height - 4)
+		m.table.SetHeight(m.height - 4) // 1 header + 1 blank + table + 1 blank + 1 footer
+		m.tableDetail.SetHeight(m.height - 5) // 3 header lines + 1 blank + 1 footer
 		m.applySort()
 
 		return m, nil
@@ -385,7 +404,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) openDetailView() {
-	rows, pids := buildTreeRows(m.frozenProcs, m.frozenProc)
+	// Remember which PID is under the cursor so we can restore it after rebuild.
+	var cursorPID int
+	if c := m.tableDetail.Cursor(); c >= 0 && c < len(m.treeRowPIDs) {
+		cursorPID = m.treeRowPIDs[c]
+	}
+
+	rows, pids := buildTreeRows(m.procs, m.detailProc)
 
 	if q := m.filter.Value(); q != "" {
 		q = strings.ToLower(q)
@@ -402,8 +427,15 @@ func (m *Model) openDetailView() {
 
 	m.tableDetail.SetRows(rows)
 	m.treeRowPIDs = pids
+	// Restore cursor: prefer the previously focused row, fall back to detailProc.
 	for i, pid := range pids {
-		if pid == m.frozenProc.Pid {
+		if pid == cursorPID {
+			m.tableDetail.SetCursor(i)
+			return
+		}
+	}
+	for i, pid := range pids {
+		if pid == m.detailProc.Pid {
 			m.tableDetail.SetCursor(i)
 			return
 		}

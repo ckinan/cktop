@@ -66,9 +66,9 @@ type Model struct {
 	killPID     int
 	killMsg     string
 	// fields for details view
-	showDetail  bool
-	frozenProc  domain.Process
-	frozenProcs []domain.Process
+	showDetail     bool
+	detailProc     domain.Process
+	detailProcDead bool
 }
 
 func New(ch <-chan domain.Snapshot) Model {

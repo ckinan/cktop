@@ -8,31 +8,41 @@ import (
 
 func (m Model) View() string {
 	if m.showDetail {
+		deadIndicator := ""
+		if m.detailProcDead {
+			deadIndicator = " [PROCESS EXITED]"
+		}
 		header := fmt.Sprintf(
-			"PID: %d | PPID: %d | User: %s | CPU: %.2f%% | RSS: %s\nCmdLine: %s",
-			m.frozenProc.Pid,
-			m.frozenProc.Ppid,
-			m.frozenProc.Username,
-			m.frozenProc.CPU,
-			util.HumanBytes(int64(m.frozenProc.Rss)),
-			m.frozenProc.Cmdline,
+			"%s\nPID: %d | PPID: %d | User: %s | CPU: %.2f%% | RSS: %s%s\nCmdLine: %s",
+			m.systemHeader(),
+			m.detailProc.Pid,
+			m.detailProc.Ppid,
+			m.detailProc.Username,
+			m.detailProc.CPU,
+			util.HumanBytes(int64(m.detailProc.Rss)),
+			deadIndicator,
+			m.detailProc.Cmdline,
 		)
 		footer := m.footerView("[enter]details [/]search [H]kthreads [F9]kill [q]back")
 		return header + "\n" + m.tableDetail.View() + "\n\n" + footer
 	}
+	header := m.systemHeader() + "\n"
+	footer := m.footerView("sort: [C]cpu [M]rss [P]pid [L]cmdline | [enter]details [/]search [H]kthreads [F9]kill [q]quit")
+	return header + "\n" + m.table.View() + "\n\n" + footer
+}
+
+func (m Model) systemHeader() string {
 	memPct := 0.0
 	if m.memory.Total > 0 {
 		memPct = float64(m.memory.Used) * 100.0 / float64(m.memory.Total)
 	}
-	header := fmt.Sprintf(
-		"CPU: %.2f%%\nMem: %s / %s (%.2f%%)\n",
+	return fmt.Sprintf(
+		"CPU: %.2f%% | Mem: %s / %s (%.2f%%)",
 		m.CPU,
 		util.HumanBytes(m.memory.Used),
 		util.HumanBytes(m.memory.Total),
 		memPct,
 	)
-	footer := m.footerView("sort: [C]cpu [M]rss [P]pid [L]cmdline | [enter]details [/]search [H]kthreads [F9]kill [q]quit")
-	return header + "\n" + m.table.View() + "\n\n" + footer
 }
 
 func (m Model) footerView(hints string) string {
