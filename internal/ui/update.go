@@ -36,23 +36,7 @@ func calcDir(showDir bool, sortDesc bool) string {
 	return " ▲"
 }
 
-func filterProcs(procs []domain.Process, query string) []domain.Process {
-	if query == "" {
-		return procs
-	}
-	q := strings.ToLower(query)
-	var out []domain.Process
-	for _, p := range procs {
-		if strings.Contains(strings.ToLower(fmt.Sprintf("%d %d %s %s %s", p.Pid, p.Ppid, p.Username, p.Cmdline, util.HumanBytes(int64(p.Rss)))), q) {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
 func (m *Model) applySort() {
-	// Reserve lines for CPU header (1) + RAM header (1) + blank (1) + [table content] + blank (1) + footer (1) = 5
-	// bubbles/table renders its own column header row internally
 	cmdW := max(20, m.width-colPIDWidth-colPPIDWidth-colUserWidth-colCPUWidth-colRSSWidth)
 
 	m.table.SetColumns([]table.Column{
@@ -65,7 +49,7 @@ func (m *Model) applySort() {
 	})
 
 	var sorted []domain.Process
-	procs := filterProcs(m.procs, m.filter.Value())
+	procs := domain.FilterProcesses(m.procs, m.filter.Value())
 	if !m.showKThreads {
 		filtered := procs[:0]
 		for _, p := range procs {
@@ -102,38 +86,6 @@ func (m *Model) applySort() {
 	m.table.SetRows(rows)
 }
 
-func buildParents(procs []domain.Process, selected domain.Process) []domain.Process {
-	pByPid := make(map[int]domain.Process, len(procs))
-	for _, p := range procs {
-		pByPid[p.Pid] = p
-	}
-
-	var chain []domain.Process
-	currentPPID := selected.Ppid
-	for currentPPID != 0 {
-		p, ok := pByPid[currentPPID]
-		if !ok {
-			break
-		}
-		chain = append(chain, p)
-		currentPPID = p.Ppid
-	}
-	return chain
-}
-
-func buildChildren(procs []domain.Process) map[int][]int {
-	childrenByPid := make(map[int][]int)
-	seen := make(map[int]bool, len(procs))
-	for _, p := range procs {
-		if seen[p.Pid] {
-			continue // gopsutil can return duplicate PIDs on /proc race; skip
-		}
-		seen[p.Pid] = true
-		childrenByPid[p.Ppid] = append(childrenByPid[p.Ppid], p.Pid)
-	}
-	return childrenByPid
-}
-
 // appendTreeRows recursively builds table rows for the descendants of pid.
 // prefix carries the vertical-bar context from parent levels so connectors line up correctly.
 // Children are sorted by PID for a stable layout across live refreshes.
@@ -160,13 +112,13 @@ func buildTreeRows(procs []domain.Process, selected domain.Process) ([]table.Row
 	for _, p := range procs {
 		pByPid[p.Pid] = p
 	}
-	childrenByPid := buildChildren(procs)
-	parents := buildParents(procs, selected)
+	childrenByPid := domain.BuildChildren(procs)
+	parents := domain.BuildParents(procs, selected)
 
 	var rows []table.Row
 	var pids []int
 
-	// ancestors: root → immediate parent — always a single chain so └─ is always correct
+	// ancestors: root to immediate parent (single chain, so "└─" is always correct)
 	for depth, i := 0, len(parents)-1; i >= 0; i, depth = i-1, depth+1 {
 		p := parents[i]
 		if depth == 0 {
@@ -186,7 +138,7 @@ func buildTreeRows(procs []domain.Process, selected domain.Process) ([]table.Row
 	}
 	pids = append(pids, selected.Pid)
 
-	// children subtree — prefix is the vertical context below the selected node
+	// children subtree
 	childPrefix := strings.Repeat("   ", depth)
 	rows, pids = appendTreeRows(selected.Pid, pByPid, childrenByPid, childPrefix, rows, pids)
 
@@ -315,6 +267,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 					}
 					m.detailProcDead = false
+					m.treeRowPIDs = nil // reset cursor so openDetailView lands on the new process
 					m.filter.SetValue("")
 					m.openDetailView()
 				}
@@ -363,6 +316,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			m.detailProcDead = false
+			m.treeRowPIDs = nil // reset cursor so openDetailView lands on the selected process
 			m.filter.SetValue("")
 			m.openDetailView()
 			m.showDetail = true
@@ -393,7 +347,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		m.table.SetHeight(m.height - 4) // 1 header + 1 blank + table + 1 blank + 1 footer
+		m.table.SetHeight(m.height - 4)       // 1 header + 1 blank + table + 1 blank + 1 footer
 		m.tableDetail.SetHeight(m.height - 5) // 3 header lines + 1 blank + 1 footer
 		m.applySort()
 
